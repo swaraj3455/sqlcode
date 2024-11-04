@@ -1,7 +1,6 @@
 /*
 Schema
 */
-DROP TABLE IF EXISTS [dbo].[timesheet];
 CREATE TABLE [dbo].[timesheet]
 (
 	[id] [int] NOT NULL,
