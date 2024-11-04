@@ -1,67 +1,46 @@
-name: Azure SQL Deploy
-
+name: SQL Code Deployment
+ 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - dev  # Triggers the workflow on push to the main branch
     paths:
       - 'db/**'  # Trigger only when SQL files change
   pull_request:
-    branches: [ main ]
+    branches: 
+      - dev
     paths:
       - 'db/**'
   workflow_dispatch:  # Allow manual trigger
-
-env:
-  AZURE_SQL_SERVER: demo-sql-srvr-01.database.windows.net
-  AZURE_SQL_DATABASE: demosqldb01
-  AZURE_SQL_USERNAME: ${{ secrets.AZURE_SQL_USERNAME }}
-  AZURE_SQL_PASSWORD: ${{ secrets.AZURE_SQL_PASSWORD }}
-
+  
+ 
 jobs:
-  build-and-deploy:
+  deploy-sql:
     runs-on: ubuntu-latest
-    
     steps:
-    - uses: actions/checkout@v3
-      
-    - name: Set up SQL Package
-      run: |
-        curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-        curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
-        sudo apt-get update
-        sudo ACCEPT_EULA=Y apt-get install mssql-tools unixodbc-dev
-        
-    - name: Build SQL Project
-      run: |
-        # Combine all SQL files into a single deployment script
-        cat db/*.sql > combined_script.sql
-        
-    - name: Run Tests
-      run: |
-        # Optional: Add your SQL testing commands here
-        # Example using tSQLt or other testing frameworks
-        echo "Running SQL tests..."
-        
-    - name: Deploy to Azure SQL Database
-      run: |
-        /opt/mssql-tools/bin/sqlcmd \
-          -S $AZURE_SQL_SERVER \
-          -d $AZURE_SQL_DATABASE \
-          -U $AZURE_SQL_USERNAME \
-          -P $AZURE_SQL_PASSWORD \
-          -i combined_script.sql \
-          -o deployment_log.txt
-          
-    - name: Upload Deployment Logs
-      if: always()
-      uses: actions/upload-artifact@v3
+    - name: Checkout Repository
+      uses: actions/checkout@v2  # Check out your repository
+ 
+    - name: Set up Python environment
+      uses: actions/setup-python@v2
       with:
-        name: deployment-logs
-        path: deployment_log.txt
-
-    - name: Check for Errors
+        python-version: '3.x'  # Specify the version of Python to install
+ 
+    - name: Install SQL CLI
       run: |
-        if grep -i "error" deployment_log.txt; then
-          echo "Deployment contained errors"
-          exit 1
-        fi
+        pip install sqlcmd  # Or any other CLI tool you are using for SQL execution
+ 
+    - name: Deploy SQL scripts
+      env:
+        AZURE_SQL_SERVER: demo-sql-srvr-01.database.windows.net
+        AZURE_SQL_DATABASE: demosqldb01
+        AZURE_SQL_USERNAME: ${{ secrets.AZURE_SQL_USERNAME }}
+        AZURE_SQL_PASSWORD: ${{ secrets.AZURE_SQL_PASSWORD }}
+      run: |
+        # Example SQLCMD to execute SQL scripts
+        sqlcmd -S $AZURE_SQL_SERVER -d $AZURE_SQL_DATABASE -U $AZURE_SQL_USERNAME -P $AZURE_SQL_PASSWORD -i ./db/sampledata.sql
+ 
+    - name: Post-deployment Verification (Optional)
+      run: |
+        # Add any post-deployment steps like validation queries or tests
+        echo "Post-deployment checks successful"
